@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>How Do I Get There? – London Directions Practice</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<style>
+  body { margin: 0; font-family: Arial, sans-serif; }
+  .app { display: flex; height: 100vh; }
+  #map { flex: 1; }
+
+  .sidebar {
+    width: 340px;
+    background: #fafafa;
+    padding: 16px;
+    border-right: 1px solid #ccc;
+    overflow-y: auto;
+  }
+
+  select, textarea {
+    width: 100%;
+    padding: 6px;
+    margin-bottom: 10px;
+    font-size: 14px;
+  }
+
+  textarea { height: 120px; resize: vertical; }
+
+  .expr-box {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+
+  .expr-box ul { padding-left: 18px; }
+
+  .expr-box li {
+    cursor: pointer;
+    margin-bottom: 4px;
+  }
+
+  .expr-box li:hover {
+    background: #e8e8e8;
+  }
+</style>
+</head>
+
+<body>
+<div class="app">
+
+  <div class="sidebar">
+    <h2>How Do I Get There? – London Directions</h2>
+
+    <p><b>Short Instructions (Pair Work)</b></p>
+    <ul>
+      <li>Start at <b>Buckingham Palace</b>.</li>
+      <li>Choose a destination.</li>
+      <li>Student A asks: “How do I get to …?”</li>
+      <li>Student B gives directions.</li>
+      <li>Look at the map and describe the route.</li>
+      <li>Click the useful expressions to add them to the box.</li>
+      <li>Change roles and choose another place.</li>
+    </ul>
+
+    <hr />
+
+    <p><b>Starting point:</b> Buckingham Palace (FIXED)</p>
+
+    <label><b>Select a destination:</b></label>
+    <select id="destinationSelect">
+      <option value="">— choose —</option>
+
+      <!-- 15 highlights close to Buckingham Palace -->
+      <option value="51.5007,-0.1246">Big Ben</option>
+      <option value="51.5030,-0.1196">Westminster Bridge</option>
+      <option value="51.5033,-0.1195">London Eye</option>
+      <option value="51.5024,-0.1340">St James’s Park</option>
+      <option value="51.5030,-0.1439">Green Park</option>
+      <option value="51.5073,-0.1657">Hyde Park</option>
+      <option value="51.5101,-0.1337">Piccadilly Circus</option>
+      <option value="51.5107,-0.1300">Leicester Square</option>
+      <option value="51.5080,-0.1281">Trafalgar Square</option>
+      <option value="51.5089,-0.1283">National Gallery</option>
+      <option value="51.5119,-0.1235">Covent Garden</option>
+      <option value="51.5030,-0.1285">Horse Guards Parade</option>
+      <option value="51.5014,-0.1419">Buckingham Palace Gardens</option>
+      <option value="51.5035,-0.1382">St James’s Park Lake</option>
+      <option value="51.5026,-0.1509">Wellington Arch</option>
+    </select>
+
+    <h3>Useful expressions (A1–B1)</h3>
+
+    <div class="expr-box">
+      <b>Asking for directions</b>
+      <ul id="askList">
+        <li>Excuse me, where is …?</li>
+        <li>How do I get to …?</li>
+        <li>Can you tell me the way to …?</li>
+        <li>Is it far from here?</li>
+        <li>Which way is …?</li>
+        <li>Could you point me towards …?</li>
+        <li>Is this the right way to …?</li>
+        <li>How long does it take to walk there?</li>
+        <li>Can you show me on the map?</li>
+        <li>Is it near here?</li>
+      </ul>
+
+      <b>Giving directions</b>
+      <ul id="giveList">
+        <li>Go straight ahead.</li>
+        <li>Turn left / right.</li>
+        <li>Walk past the …</li>
+        <li>Cross the street.</li>
+        <li>You’ll see it on your left / right.</li>
+        <li>Keep going until you reach …</li>
+        <li>Walk through the park.</li>
+        <li>Follow the signs for …</li>
+        <li>It’s next to the …</li>
+        <li>Stay on this road.</li>
+      </ul>
+    </div>
+
+    <label><b>Students’ directions:</b></label>
+    <textarea id="studentText"></textarea>
+
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// -------------------------------
+// PHRASE CLICKING FUNCTIONALITY
+// -------------------------------
+function enablePhraseClicking(listId) {
+  const list = document.getElementById(listId);
+  const textarea = document.getElementById("studentText");
+
+  list.querySelectorAll("li").forEach(li => {
+    li.addEventListener("click", () => {
+      textarea.value += li.textContent + " ";
+      textarea.focus();
+    });
+  });
+}
+
+enablePhraseClicking("askList");
+enablePhraseClicking("giveList");
+
+// -------------------------------
+// MAP INITIALISATION
+// -------------------------------
+const ORS_API_KEY = "YOUR_API_KEY_HERE"; // Add your key
+
+const londonBounds = L.latLngBounds([51.47,-0.25],[51.54,0.05]);
+
+const map = L.map("map", {
+  maxBounds: londonBounds,
+  maxBoundsViscosity: 0.8,
+  minZoom: 12
+}).setView([51.5014, -0.1419], 14);
+
+L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 20 }
+).addTo(map);
+
+// Start marker
+const startPoint = [51.5014, -0.1419];
+L.marker(startPoint).addTo(map).bindPopup("Start: Buckingham Palace");
+
+// -------------------------------
+// ROUTING LOGIC (NO ALERTS ANYMORE)
+// -------------------------------
+let destMarker = null;
+let routeLine = null;
+
+document.getElementById("destinationSelect").addEventListener("change", chooseDestination);
+
+async function chooseDestination(){
+  const value = document.getElementById("destinationSelect").value;
+  if(!value) return;
+
+  const [lat, lng] = value.split(",").map(Number);
+  const dest = [lat, lng];
+
+  if(destMarker) map.removeLayer(destMarker);
+  if(routeLine) map.removeLayer(routeLine);
+
+  destMarker = L.marker(dest, {
+    icon: L.icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+      iconSize: [25,41],
+      iconAnchor: [12,41]
+    })
+  }).addTo(map).bindPopup("Destination");
+
+  await drawRoute(startPoint, dest);
+}
+
+async function drawRoute(start, end){
+  const url = "https://api.openrouteservice.org/v2/directions/foot-walking/geojson";
+
+  const body = {
+    coordinates: [
+      [start[1], start[0]],
+      [end[1], end[0]]
+    ]
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": ORS_API_KEY
+      },
+      body: JSON.stringify(body)
+    });
+
+    if(!res.ok){
+      console.log("Routing error — check API key.");
+      return;
+    }
+
+    const data = await res.json();
+
+    if(!data.features || !data.features.length){
+      console.log("No route found.");
+      return;
+    }
+
+    const coords = data.features[0].geometry.coordinates;
+    const latlngs = coords.map(c => [c[1], c[0]]);
+
+    if(routeLine) map.removeLayer(routeLine);
+    routeLine = L.polyline(latlngs, {color:"red", weight:4}).addTo(map);
+
+    map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+
+  } catch(err){
+    console.log("Network error contacting routing service.");
+  }
+}
+</script>
+
+</body>
+</html>
