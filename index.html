@@ -250,16 +250,25 @@ async function drawRoute(start, end){
 }
 </script>
 
-<!-- POC-HUB-BACK v1: "Back to my Learning Hub" button (only shows when the app was opened from the Piece of Cake Learning Hub) -->
+<!-- POC-HUB-BACK v2: "Back to my Learning Hub" button (only shows when the app was opened from the Piece of Cake Learning Hub) -->
 <script>
 (function(){
   try {
-    var KEY = 'pocHubBack', ref = document.referrer || '', fromHub = /learning-hub|piece-of-cake|^https:\/\/barbaralangszabo-collab\.github\.io\/?$/i.test(ref), start = null;
+    var KEY = 'pocHubBack', ref = document.referrer || '', fromHub = /learning-hub|piece-of-cake|^https:\/\/barbaralangszabo-collab\.github\.io\/?$/i.test(ref), start = null, from = '';
     try {
-      if (fromHub) sessionStorage.setItem(KEY, String(history.length));
-      start = sessionStorage.getItem(KEY);
-    } catch (e) { start = fromHub ? String(history.length) : null; }
-    if (!start || history.length < 2) return;            /* not opened from the hub, or opened in a new tab */
+      if (fromHub){ sessionStorage.setItem(KEY, String(history.length)); sessionStorage.setItem(KEY + 'R', ref); }
+      start = sessionStorage.getItem(KEY); from = sessionStorage.getItem(KEY + 'R') || '';
+    } catch (e) { start = fromHub ? String(history.length) : null; from = ref; }
+    if (!start) return;                                    /* not opened from the hub */
+    /* the exact student page the app was opened from (saved by the Learning Hub; readable for apps on the same website) */
+    function hubPage(){
+      try {
+        var u = localStorage.getItem('pocHubReturnUrl') || '';
+        if (u && from && u.split('#')[0].indexOf(from.split('#')[0]) === 0) return u;
+      } catch (e) {}
+      return '';
+    }
+    if (history.length < 2 && !hubPage()) return;          /* opened in a new tab and nowhere to go back to */
     function add(){
       if (document.getElementById('poc-hub-back')) return;
       var host = document.createElement('div');
@@ -272,9 +281,11 @@ async function drawRoute(start, end){
         + 'button:active{transform:scale(.96)}b{font-size:17px;line-height:1}@media print{button{display:none}}</style>'
         + '<button type="button" aria-label="Back to my Learning Hub"><b aria-hidden="true">&#8592;</b>My Learning Hub</button>';
       root.querySelector('button').addEventListener('click', function(){
-        var steps = Math.max(1, history.length - Number(start) + 1);
-        try { sessionStorage.removeItem(KEY); } catch (e) {}
-        history.go(-steps);
+        var page = hubPage(), left = false;
+        if (page){ location.href = page; return; }          /* straight back to the student's own page */
+        window.addEventListener('pagehide', function(){ left = true; });
+        history.go(-Math.max(1, history.length - Number(start) + 1));
+        setTimeout(function(){ if (!left && from) location.href = from; }, 900);   /* if the browser would not go back */
       });
       document.body.appendChild(host);
     }
