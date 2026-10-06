@@ -250,5 +250,37 @@ async function drawRoute(start, end){
 }
 </script>
 
+<!-- POC-HUB-BACK v1: "Back to my Learning Hub" button (only shows when the app was opened from the Piece of Cake Learning Hub) -->
+<script>
+(function(){
+  try {
+    var KEY = 'pocHubBack', ref = document.referrer || '', fromHub = /learning-hub|piece-of-cake|^https:\/\/barbaralangszabo-collab\.github\.io\/?$/i.test(ref), start = null;
+    try {
+      if (fromHub) sessionStorage.setItem(KEY, String(history.length));
+      start = sessionStorage.getItem(KEY);
+    } catch (e) { start = fromHub ? String(history.length) : null; }
+    if (!start || history.length < 2) return;            /* not opened from the hub, or opened in a new tab */
+    function add(){
+      if (document.getElementById('poc-hub-back')) return;
+      var host = document.createElement('div');
+      host.id = 'poc-hub-back';
+      host.style.cssText = 'position:fixed;z-index:2147483647;top:calc(10px + env(safe-area-inset-top,0px));left:calc(10px + env(safe-area-inset-left,0px));';
+      var root = host.attachShadow ? host.attachShadow({mode:'open'}) : host;
+      root.innerHTML = '<style>button{all:initial;display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px 8px 11px;border-radius:999px;'
+        + 'background:rgba(255,253,248,.94);color:#1f6f73;border:1.5px solid #4de6cf;box-shadow:0 4px 14px rgba(40,52,56,.18);'
+        + 'font:700 14px/1.1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}'
+        + 'button:active{transform:scale(.96)}b{font-size:17px;line-height:1}@media print{button{display:none}}</style>'
+        + '<button type="button" aria-label="Back to my Learning Hub"><b aria-hidden="true">&#8592;</b>My Learning Hub</button>';
+      root.querySelector('button').addEventListener('click', function(){
+        var steps = Math.max(1, history.length - Number(start) + 1);
+        try { sessionStorage.removeItem(KEY); } catch (e) {}
+        history.go(-steps);
+      });
+      document.body.appendChild(host);
+    }
+    if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
+  } catch (e) {}
+})();
+</script>
 </body>
 </html>
